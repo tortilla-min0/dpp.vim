@@ -136,7 +136,7 @@ export class Dpp {
         return;
       }
 
-      if (!plugin.merged) {
+      if (!plugin.merged && !rtps.includes(plugin.rtp) ) {
         rtps.splice(runtimeIndex, 0, plugin.rtp);
 
         const afterDir = `${plugin.rtp}/after`;
