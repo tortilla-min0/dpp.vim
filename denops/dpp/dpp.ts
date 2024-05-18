@@ -487,7 +487,7 @@ function initPlugin(plugin: Plugin, basePath: string, hasLua: boolean): Plugin {
     ).length > 0;
   }
 
-  if (!plugin.merged) {
+  if (plugin.merged == undefined || plugin.merged) {
     plugin.merged = !plugin.lazy && [
           "local",
           "build",
