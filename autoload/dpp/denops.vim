@@ -36,15 +36,6 @@ function dpp#denops#_notify(method, args) abort
   return s:notify(a:method, a:args)
 endfunction
 
-function dpp#denops#_load(name, path) abort
-  try
-    call denops#plugin#load(a:name, a:path)
-  catch /^Vim\%((\a\+)\)\=:E117:/
-    " Fallback to `register` for backward compatibility
-    silent! call denops#plugin#register(a:name, a:path, #{ mode: 'skip' })
-  endtry
-endfunction
-
 function s:init() abort
   if 's:initialized'->exists()
     return
@@ -66,19 +57,29 @@ function s:init() abort
 
   augroup dpp
     autocmd!
-    autocmd User DenopsPluginPost:dpp let s:initialized = v:true
+    autocmd User DenopsPluginPost:dpp ++nested let s:initialized = v:true
   augroup END
 
   let g:dpp#_started = reltime()
 
-  " NOTE: dpp.vim must be registered manually.
-  if 'g:loaded_denops'->exists() &&
-        \ ('<amatch>'->expand() ==# 'DenopsReady' ||
-        \  denops#server#status() ==# 'running')
-    call s:register()
-  else
-    autocmd dpp User DenopsReady call s:register()
+  " NOTE: denops load may be started
+  if 'g:loaded_denops'->exists()
+    if denops#server#status() ==# 'running'
+      call s:register()
+      return
+    endif
+
+    try
+      if '<amatch>'->expand() ==# 'DenopsReady'
+        call s:register()
+        return
+      endif
+    catch /^Vim\%((\a\+)\)\=:E497:/
+      " NOTE: E497 is occured when it is not in autocmd.
+    endtry
   endif
+
+  autocmd dpp User DenopsReady ++nested call s:register()
 endfunction
 
 function s:notify(method, args) abort
@@ -93,12 +94,12 @@ endfunction
 const s:root_dir = '<sfile>'->expand()->fnamemodify(':h:h:h')
 const s:sep = has('win32') ? '\' : '/'
 function s:register() abort
-  call dpp#denops#_load(
+  call denops#plugin#load(
         \   'dpp',
         \   [s:root_dir, 'denops', 'dpp', 'app.ts']->join(s:sep)
         \ )
 
-  autocmd dpp User DenopsClosed call s:stopped()
+  autocmd dpp User DenopsClosed ++nested call s:stopped()
 endfunction
 function s:stopped() abort
   unlet! s:initialized
